@@ -38,7 +38,7 @@ window.onload = async function() {
         const response = await fetch(API_DOMAIN + '/api/cats', {
             method: 'POST',
             headers: {
-                "Content-Type": "application/json"
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 name: nameElement.value,

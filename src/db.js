@@ -35,13 +35,7 @@ class CatDB {
 	constructor() {
 	}
 
-	generatePreview(body) {
-		return body.substring(0, 20) + "...";
-	}
-
 	async initialize() {
-        console.log(process.env.DATABASE_URL);
-
 		const pool = new Pool({
 			connectionString: process.env.DATABASE_URL,
 		});
@@ -49,7 +43,6 @@ class CatDB {
 		this.client = await pool.connect();
 
 		await this.client.query(createCatTableStatement);
-
 	}
 
 	async insertCat(name, age, image) {
