@@ -15,10 +15,10 @@ const createCatTableStatement = `
 const insertCatStatement = `
 	insert into cat values (
 		$1,
-        $2,
-        $3,
-        $4,
-        $5
+		$2,
+		$3,
+		$4,
+		$5
 	) on conflict (cat_id) do nothing;
 `;
 
