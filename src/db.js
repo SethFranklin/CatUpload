@@ -5,10 +5,10 @@ const { Pool } = pg;
 const createCatTableStatement = `
 	create table if not exists cat (
 		cat_id integer primary key,
-        created_timestamp bigint,
+		created_timestamp bigint,
 		name varchar(64),
 		age integer,
-        image varchar(512)
+		image varchar(512)
 	);
 `;
 
@@ -52,9 +52,9 @@ class CatDB {
 		query_res = await this.client.query(insertCatStatement, [
 			cat_id,
 			Date.now(),
-            name,
-            age,
-            image
+			name,
+			age,
+			image
 		]);
 
 		return cat_id;
