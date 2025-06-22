@@ -1,33 +1,32 @@
 import 'dotenv/config';
-import pg from 'pg';
-const { Pool } = pg;
+import oracledb from "oracledb";
 
 const createCatTableStatement = `
-	create table if not exists cat (
-		cat_id integer primary key,
-		created_timestamp bigint,
+	create table if not exists cats (
+		cat_id number primary key,
+		created_timestamp number,
 		name varchar(64),
-		age integer,
-		image varchar(512)
-	);
+		age number,
+		imageFileName varchar(512)
+	)
 `;
 
 const insertCatStatement = `
-	insert into cat values (
-		$1,
-		$2,
-		$3,
-		$4,
-		$5
-	) on conflict (cat_id) do nothing;
+	insert into cats values (
+		:cat_id,
+		:created_timestamp,
+		:name,
+		:age,
+		:imageFileName
+	)
 `;
 
 const selectNewCatIdStatement = `
-	select max(cat_id)+1 as cat_id from cat;
+	select max(cat_id)+1 as cat_id from cats
 `;
 
 const selectCatsStatement = `
-	select * from cat order by created_timestamp desc;
+	select * from cats order by created_timestamp desc
 `;
 
 class CatDB {
@@ -36,33 +35,35 @@ class CatDB {
 	}
 
 	async initialize() {
-		const pool = new Pool({
-			connectionString: process.env.DATABASE_URL,
+		this.connection = await oracledb.getConnection({
+			user          : process.env.ORACLE_USER,
+			password      : process.env.ORACLE_PASSWORD,
+			connectString : process.env.ORACLE_CONNECT_STRING
 		});
 
-		this.client = await pool.connect();
-
-		await this.client.query(createCatTableStatement);
+		await this.connection.execute(createCatTableStatement);
 	}
 
-	async insertCat(name, age, image) {
-		let query_res = await this.client.query(selectNewCatIdStatement);
-		const cat_id = query_res.rows[0].cat_id ?? 0;
+	async insertCat(name, age, imageFileName) {
+		let query_result = await this.connection.execute(selectNewCatIdStatement);
+		const cat_id = query_result.rows[0][0] ?? 0;
 
-		query_res = await this.client.query(insertCatStatement, [
+		query_result = await this.connection.execute(insertCatStatement, [
 			cat_id,
 			Date.now(),
 			name,
 			age,
-			image
+			imageFileName
 		]);
+
+		await this.connection.commit();
 
 		return cat_id;
 	}
 
 	async getCats() {
-		const query_res = await this.client.query(selectCatsStatement);
-		return query_res.rows;
+		const query_result = await this.connection.execute(selectCatsStatement);
+		return query_result.rows;
 	}
 
 }

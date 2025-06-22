@@ -8,13 +8,14 @@ window.onload = async function() {
     const cats = await response.json();
 
     for (const cat of cats) {
+        console.log(cat);
         const date = new Date(0);
-        date.setUTCMilliseconds(cat.created_timestamp);
+        date.setUTCMilliseconds(cat[1]);
         catsListElement.innerHTML += `
             <li>
-                <img src="/cats/${cat.image}"><br>
-                Name: ${cat.name}<br>
-                Age: ${cat.age}<br>
+                <img src="/cats/${cat[4]}"><br>
+                Name: ${cat[2]}<br>
+                Age: ${cat[3]}<br>
                 Upload time: ${date}
             </li>
         `;

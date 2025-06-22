@@ -26,14 +26,14 @@ app.get('/api/cats', async (req, res) => {
 
 app.post('/api/cats', async (req, res) => {
   const base64Image = req.body.image.replace(/^data:image\/png;base64,/, '');
-  const imageIndex = randomBytes(16 / 2).toString('hex') + '.png';
+  const imageFileName = randomBytes(16 / 2).toString('hex') + '.png';
   if (localDeploy) {
     // write to filesystem
-    fs.writeFileSync('./static/cats/' + imageIndex, base64Image, 'base64');
+    fs.writeFileSync('./static/cats/' + imageFileName, base64Image, 'base64');
   } else {
     // write to s3
   }
-  res.json(await catDB.insertCat(req.body.name, req.body.age, imageIndex));
+  res.json(await catDB.insertCat(req.body.name, req.body.age, imageFileName));
 });
 
 app.listen(port, () => {
