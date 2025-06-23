@@ -20,7 +20,7 @@ locals {
 
   ADDRESS_SPACE = "10.0.0.0/24"
 
-  subnet_cidrs = cidrsubets(local.ADDRESS_SPACE, 1, 1)
+  subnet_cidrs = cidrsubnets(local.ADDRESS_SPACE, 2, 2, 2)
 }
 
 provider "aws" {
@@ -83,13 +83,23 @@ resource "aws_vpc_security_group_egress_rule" "dmz_allow_all_outbound" {
   ip_protocol = -1
 }
 
-resource "aws_subnet" "db" {
+resource "aws_subnet" "db_a" {
   vpc_id            = aws_vpc.cat.id
   cidr_block        = local.subnet_cidrs[1]
   availability_zone = "${local.REGION}a"
 
   tags = {
-    Name = "DB Subnet"
+    Name = "DB Subnet AZ A"
+  }
+}
+
+resource "aws_subnet" "db_b" {
+  vpc_id            = aws_vpc.cat.id
+  cidr_block        = local.subnet_cidrs[2]
+  availability_zone = "${local.REGION}b"
+
+  tags = {
+    Name = "DB Subnet AZ B"
   }
 }
 
@@ -101,8 +111,13 @@ resource "aws_route_table" "db" {
   }
 }
 
-resource "aws_route_table_association" "db" {
-  subnet_id      = aws_subnet.db.id
+resource "aws_route_table_association" "db_a" {
+  subnet_id      = aws_subnet.db_a.id
+  route_table_id = aws_route_table.db.id
+}
+
+resource "aws_route_table_association" "db_b" {
+  subnet_id      = aws_subnet.db_b.id
   route_table_id = aws_route_table.db.id
 }
 
@@ -116,13 +131,13 @@ resource "aws_security_group" "db" {
   }
 }
 
-resource "aws_vpc_security_group_ingress_rule" "db_allow_dmz_ssh" {
+resource "aws_vpc_security_group_ingress_rule" "db_allow_dmz" {
   security_group_id = aws_security_group.db.id
 
   referenced_security_group_id = aws_security_group.dmz.id
   ip_protocol                  = "tcp"
-  from_port                    = 22
-  to_port                      = 22
+  from_port                    = 1521
+  to_port                      = 1521
 }
 
 resource "aws_internet_gateway" "cat" {
@@ -140,7 +155,7 @@ resource "aws_route" "internet_bound_route" {
 }
 
 resource "aws_network_interface" "server" {
-  subnet_id       = aws_subnet.cat.id
+  subnet_id       = aws_subnet.dmz.id
   private_ips     = [cidrhost(aws_subnet.dmz.cidr_block, 4)]
   security_groups = [aws_security_group.dmz.id]
 }
@@ -155,7 +170,7 @@ data "aws_ami" "server" {
 
   filter {
     name   = "name"
-    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+    values = ["RHEL-10.*"]
   }
 
   filter {
@@ -163,12 +178,39 @@ data "aws_ami" "server" {
     values = ["hvm"]
   }
 
-  owners = ["099720109477"] # Canonical
+  owners = ["309956199498"] # Red Hat
 }
 
 resource "aws_key_pair" "server" {
   key_name   = "server_key"
   public_key = file(var.ssh_public_key_file)
+}
+
+resource "aws_iam_role" "server" {
+  name = "server_role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Sid    = ""
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      },
+    ]
+  })
+
+  tags = {
+    Name = "Cat Server Role"
+  }
+}
+
+resource "aws_iam_instance_profile" "server" {
+  name = "server_profile"
+  role = aws_iam_role.server.name
 }
 
 resource "aws_instance" "server" {
@@ -182,6 +224,8 @@ resource "aws_instance" "server" {
     device_index         = 0
   }
 
+  iam_instance_profile = aws_iam_instance_profile.server.name
+
   tags = {
     Name = "Cat Server"
   }
@@ -189,22 +233,28 @@ resource "aws_instance" "server" {
 
 resource "aws_db_subnet_group" "db" {
   name       = "db_subnet_group"
-  subnet_ids = [aws_subnet.db.id]
+  subnet_ids = [aws_subnet.db_a.id, aws_subnet.db_b.id]
 
   tags = {
     Name = "DB Subnet Group"
   }
 }
 
+data "aws_rds_engine_version" "db" {
+  engine = "oracle-se2"
+  latest = true
+}
+
 resource "aws_db_instance" "db" {
-  allocated_storage    = 1
-  db_name              = "catdb"
-  engine               = "postgres"
-  engine_version       = "14.1"
-  instance_class       = "db.t2.micro"
-  username             = "postgres"
-  parameter_group_name = "default.mysql8.0"
-  skip_final_snapshot  = true
+  allocated_storage   = 20
+  db_name             = "catdb"
+  engine              = data.aws_rds_engine_version.db.engine
+  engine_version      = data.aws_rds_engine_version.db.version_actual
+  license_model       = "license-included"
+  instance_class      = "db.m5.large"
+  username            = "admin_user"
+  password            = "admin_pass"
+  skip_final_snapshot = true
 
   db_subnet_group_name   = aws_db_subnet_group.db.name
   vpc_security_group_ids = [aws_security_group.db.id]
@@ -250,14 +300,9 @@ resource "aws_s3_bucket_public_access_block" "cat" {
   restrict_public_buckets = false
 }
 
-resource "aws_s3_bucket_acl" "cat" {
-  bucket = aws_s3_bucket.cat.id
-  acl    = "private"
-}
-
 resource "aws_cloudfront_distribution" "website" {
   origin {
-    domain_name = aws_s3_bucket_website_configuration.website.website_endpoint
+    domain_name = aws_s3_bucket_website_configuration.cat.website_endpoint
     origin_id   = random_pet.bucket_name_prefix.id
     custom_origin_config {
       http_port              = 80
@@ -316,7 +361,7 @@ resource "aws_cloudfront_distribution" "website" {
   }
 }
 
-data "aws_iam_policy_document" "cloudfront_access_s3" {
+data "aws_iam_policy_document" "s3" {
   statement {
     actions   = ["s3:GetObject"]
     resources = ["${aws_s3_bucket.cat.arn}/*"]
@@ -325,9 +370,18 @@ data "aws_iam_policy_document" "cloudfront_access_s3" {
       identifiers = ["*"]
     }
   }
+
+  statement {
+    actions   = ["s3:PutObject"]
+    resources = ["${aws_s3_bucket.cat.arn}/cats/*"]
+    principals {
+      type        = "AWS"
+      identifiers = [aws_iam_role.server.arn]
+    }
+  }
 }
 
-resource "aws_s3_bucket_policy" "cloudfront_access_s3" {
+resource "aws_s3_bucket_policy" "s3" {
   bucket = aws_s3_bucket.cat.id
-  policy = data.aws_iam_policy_document.cloudfront_access_s3.json
+  policy = data.aws_iam_policy_document.s3.json
 }
