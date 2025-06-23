@@ -1,5 +1,5 @@
 
-const API_DOMAIN = '';
+const API_DOMAIN = '18.211.209.47:3000';
 
 window.onload = async function() {
     const catsListElement = document.getElementById('cats');
@@ -30,7 +30,7 @@ window.onload = async function() {
         let fr = new FileReader();
         fr.onload = () => resolve( fr.result);
         fr.onerror = reject;
-        fr.readAsDataURL(file)
+        fr.readAsDataURL(file);
     });
 
     buttonElement.onclick = async function() {

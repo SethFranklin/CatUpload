@@ -72,8 +72,8 @@ resource "aws_vpc_security_group_ingress_rule" "dmz_allow_internet_http" {
 
   cidr_ipv4   = "0.0.0.0/0"
   ip_protocol = "tcp"
-  from_port   = 80
-  to_port     = 80
+  from_port   = 3000
+  to_port     = 3000
 }
 
 resource "aws_vpc_security_group_egress_rule" "dmz_allow_all_outbound" {
@@ -247,7 +247,7 @@ data "aws_rds_engine_version" "db" {
 
 resource "aws_db_instance" "db" {
   allocated_storage   = 20
-  db_name             = "catdb"
+  db_name             = "CATDB"
   engine              = data.aws_rds_engine_version.db.engine
   engine_version      = data.aws_rds_engine_version.db.version_actual
   license_model       = "license-included"
