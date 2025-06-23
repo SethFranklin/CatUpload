@@ -47,7 +47,7 @@ app.post('/api/cats', async (req, res) => {
       Key: "cats/" + imageFileName
     };
     const command = new PutObjectCommand(input);
-    const response = await client.send(command);
+    const response = await s3Client.send(command);
   }
   res.json(await catDB.insertCat(req.body.name, req.body.age, imageFileName));
 });
