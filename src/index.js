@@ -1,5 +1,6 @@
 
 import express from 'express';
+import cors from "cors";
 import fs from 'fs';
 import { S3Client, ListBucketsCommand } from "@aws-sdk/client-s3";
 import { randomBytes } from 'crypto';
@@ -16,6 +17,7 @@ const port = parseInt(process.env.PORT);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(cors());
 
 let s3Client;
 
