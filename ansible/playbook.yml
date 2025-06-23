@@ -41,6 +41,15 @@
       ansible.builtin.git:
         repo: "https://github.com/SethFranklin/CatUpload.git"
         dest: /home/{{ ansible_user_id }}/CatUpload
+    
+    - name: Npm install
+      community.general.npm:
+        path: /home/{{ ansible_user_id }}/CatUpload/nodejs
+    
+    - name: Copy .env file
+      ansible.builtin.copy:
+        src: .env
+        dest: /home/{{ ansible_user_id }}/CatUpload/nodejs/.env
   
   handlers:
     - name: Reload firewalld
