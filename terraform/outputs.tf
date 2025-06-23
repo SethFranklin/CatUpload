@@ -7,11 +7,9 @@ output "cloudfront_domain_name" {
   value = aws_cloudfront_distribution.website.domain_name
 }
 
-/*
 output "ec2_instance_public_ip_address" {
-  value = aws_eip.server.address
+  value = aws_eip.server.public_ip
 }
-*/
 
 output "s3_bucket_name" {
   value = aws_s3_bucket.cat.bucket

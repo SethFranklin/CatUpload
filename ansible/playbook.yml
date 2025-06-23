@@ -37,6 +37,12 @@
         source /home/{{ ansible_user_id }}/.nvm/nvm.sh && nvm install 22
         creates=/home/{{ ansible_user_id }}/.nvm/alias
     
+    - name: Install forever
+      community.general.npm:
+        name: forever
+        global: yes
+        state: latest
+    
     - name: Git checkout
       ansible.builtin.git:
         repo: "https://github.com/SethFranklin/CatUpload.git"
@@ -50,6 +56,17 @@
       ansible.builtin.copy:
         src: .env
         dest: /home/{{ ansible_user_id }}/CatUpload/nodejs/.env
+
+    - name: Check list of forever applications running
+      ansible.builtin.command: forever list
+      register: forever_list
+      changed_when: false
+
+    - name: Npm start forever
+      ansible.builtin.command: forever start src/index.js
+      args:
+        chdir: /home/{{ ansible_user_id }}/CatUpload/nodejs
+      when: "forever_list.stdout.find('npm start') == -1"
   
   handlers:
     - name: Reload firewalld
