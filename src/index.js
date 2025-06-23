@@ -2,7 +2,7 @@
 import express from 'express';
 import cors from "cors";
 import fs from 'fs';
-import { S3Client, ListBucketsCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { randomBytes } from 'crypto';
 import 'dotenv/config';
 import { CatDB } from "./db.js";
