@@ -1,5 +1,5 @@
 
-const API_DOMAIN = 'http://18.211.209.47:3000';
+const API_DOMAIN = '';
 
 window.onload = async function() {
     const catsListElement = document.getElementById('cats');
