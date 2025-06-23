@@ -40,7 +40,7 @@ app.post('/api/cats', async (req, res) => {
   } else {
     // write to s3
     const input = {
-      Body: Buffer.from("filetoupload", "base64"),
+      Body: Buffer.from(base64Image, "base64"),
       ContentEncoding: 'base64',
       ContentType: 'image/png',
       Bucket: process.env.AWS_S3_BUCKET_NAME,
