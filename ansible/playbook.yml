@@ -1,0 +1,50 @@
+---
+- name: Install CatUpload API server
+  hosts: all
+
+  tasks:
+    - name: Install git and firewalld
+      ansible.builtin.dnf:
+        name:
+          - git
+          - firewalld
+        state: latest
+      become: yes
+
+    - name: Start and enable firewalld service
+      ansible.builtin.service:
+        name: firewalld
+        state: started
+        enabled: yes
+      become: yes
+    
+    - name: Expose port 3000
+      ansible.posix.firewalld:
+        zone: public
+        port: 3000/tcp
+        permanent: true
+        state: enabled
+      notify: Reload firewalld
+      become: yes
+    
+    - name: Install nvm
+      ansible.builtin.shell: >
+        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+        creates=/home/{{ ansible_user_id }}/.nvm/nvm.sh
+
+    - name: Install node and npm
+      ansible.builtin.shell: >
+        source /home/{{ ansible_user_id }}/.nvm/nvm.sh && nvm install 22
+        creates=/home/{{ ansible_user_id }}/.nvm/alias
+    
+    - name: Git checkout
+      ansible.builtin.git:
+        repo: "https://github.com/SethFranklin/CatUpload.git"
+        dest: /home/{{ ansible_user_id }}/CatUpload
+  
+  handlers:
+    - name: Reload firewalld
+      ansible.builtin.service:
+        name: firewalld
+        state: reloaded
+      become: yes
