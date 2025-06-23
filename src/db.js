@@ -2,7 +2,7 @@ import 'dotenv/config';
 import oracledb from "oracledb";
 
 const createCatTableStatement = `
-	create table if not exists cats (
+	create table cats (
 		cat_id number primary key,
 		created_timestamp number,
 		name varchar(64),
@@ -41,7 +41,10 @@ class CatDB {
 			connectString : process.env.ORACLE_CONNECT_STRING
 		});
 
-		await this.connection.execute(createCatTableStatement);
+		try {
+			await this.connection.execute(createCatTableStatement);
+		} catch (e) {
+		}
 	}
 
 	async insertCat(name, age, imageFileName) {
